@@ -1,29 +1,50 @@
 import { NextResponse } from 'next/server'
+import { execSync } from 'child_process'
 
 export async function GET() {
-  // Get channel info from openclaw config
   try {
-    const { execSync } = await import('child_process')
-    const stdout = execSync('openclaw channels status --json 2>/dev/null', { encoding: 'utf-8', timeout: 5000 })
-    const channelsData = JSON.parse(stdout)
+    const stdout = execSync('openclaw channels status --json', { encoding: 'utf-8', timeout: 10000 })
+    const data = JSON.parse(stdout)
     
-    const channels = Array.isArray(channelsData) 
-      ? channelsData.map((ch: any) => ({
-          name: ch.name || ch.channel || 'Unknown',
-          type: ch.channel?.substring(0, 1).toUpperCase() || '?',
-          status: ch.connected || ch.status === 'connected' ? 'connected' : 'disconnected',
-          count: ch.conversations || ch.sessions || 0,
-          label: ch.conversations ? 'conversations' : ch.sessions ? 'sessions' : undefined,
-        }))
-      : []
+    const channels: any[] = []
+    
+    // Parse telegram accounts
+    if (data.channelAccounts?.telegram) {
+      data.channelAccounts.telegram.forEach((account: any) => {
+        channels.push({
+          name: 'Telegram',
+          account: account.name || account.accountId || 'main',
+          type: 'T',
+          status: account.running ? 'connected' : 'disconnected',
+          lastInbound: account.lastInboundAt ? new Date(account.lastInboundAt).toLocaleTimeString() : 'N/A',
+          lastOutbound: account.lastOutboundAt ? new Date(account.lastOutboundAt).toLocaleTimeString() : 'N/A',
+          mode: account.mode || 'polling'
+        })
+      })
+    }
+    
+    // Check for other channels in channelMeta
+    if (data.channelMeta) {
+      data.channelMeta.forEach((ch: any) => {
+        const channelId = ch.id
+        const existing = channels.find(c => c.name.toLowerCase() === channelId.toLowerCase())
+        if (!existing && data.channels?.[channelId]) {
+          const chData = data.channels[channelId]
+          channels.push({
+            name: ch.label || channelId,
+            type: channelId.substring(0, 1).toUpperCase(),
+            status: chData.running ? 'connected' : 'disconnected',
+            lastInbound: 'N/A',
+            lastOutbound: 'N/A',
+            mode: chData.mode || 'N/A'
+          })
+        }
+      })
+    }
     
     return NextResponse.json({ channels })
-  } catch {
-    // Return default channels if CLI fails
-    return NextResponse.json({
-      channels: [
-        { name: 'Telegram', type: 'T', status: 'connected', count: 2, label: 'conversations' },
-      ]
-    })
+  } catch (error) {
+    console.error('Failed to get channels:', error)
+    return NextResponse.json({ channels: [] })
   }
 }

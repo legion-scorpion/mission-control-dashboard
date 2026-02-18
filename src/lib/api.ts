@@ -95,12 +95,12 @@ export async function systemState() {
     const [gatewayUp, llmUp, dashboardUp] = await Promise.all([
       checkPort(18789),
       checkPort(1234),
-      checkPort(3000)
+      checkPort(18787)
     ])
     
     const servers = [
       { name: 'OpenClaw Gateway', status: gatewayUp ? 'up' : 'down', port: 18789, lastCheck: Date.now() },
-      { name: 'Dashboard Server', status: dashboardUp ? 'up' : 'down', port: 3000, lastCheck: Date.now() },
+      { name: 'Dashboard Server', status: dashboardUp ? 'up' : 'down', port: 18787, lastCheck: Date.now() },
       { name: 'Local LLM Server', status: llmUp ? 'up' : 'down', port: 1234, lastCheck: Date.now() },
     ]
     
@@ -218,33 +218,53 @@ export async function agents() {
 }
 
 export async function cronHealth() {
-  // Return known cron jobs - more reliable than parsing CLI output
-  return { 
-    jobs: [
-      { name: 'Check Legion email inbox', schedule: 'every 30m', status: 'ok' },
-      { name: 'Check for Kyle GitHub mentions', schedule: 'every 2h', status: 'ok' },
-      { name: 'GitHub Backlog Updater', schedule: 'every 1h', status: 'ok' },
-      { name: 'Nightly Backlog Grooming', schedule: 'cron 0 21 * * *', status: 'ok' },
-      { name: 'Nightly Maintenance (0h)', schedule: 'cron 0 0 * * *', status: 'ok' },
-      { name: 'Nightly Maintenance (2h)', schedule: 'cron 0 2 * * *', status: 'ok' },
-      { name: 'Nightly Maintenance (3h)', schedule: 'cron 0 3 * * *', status: 'ok' },
-      { name: 'Nightly Maintenance (4h)', schedule: 'cron 0 4 * * *', status: 'ok' },
-      { name: 'Weekly Workspace Reset', schedule: 'cron 0 3 * * 0', status: 'idle' },
-    ]
+  try {
+    const { exec } = await import('child_process')
+    const { promisify } = await import('util')
+    const execAsync = promisify(exec)
+    
+    const { stdout } = await execAsync('openclaw cron list', { timeout: 10000 })
+    const lines = stdout.trim().split('\n').slice(2) // Skip header lines
+    
+    const jobs = lines
+      .filter(line => line.trim())
+      .map(line => {
+        const parts = line.trim().split(/\s+/)
+        if (parts.length < 7) return null
+        
+        const id = parts[0]
+        const name = parts.slice(1, -6).join(' ')
+        const schedule = parts.slice(-6, -2).join(' ')
+        const status = parts[parts.length - 4]
+        
+        return { name, schedule, status, id }
+      })
+      .filter(Boolean)
+    
+    return { jobs }
+  } catch (e) {
+    console.error('cronHealth error:', e)
+    return { jobs: [] }
   }
 }
 
 export async function apiCosts() {
   try {
-    const costPath = `${WORKSPACE}/ai-cost-tracker/costs.json`
-    const data = await readJsonFile(costPath)
-    if (data) {
-      const total = Object.values(data).reduce((sum: number, entry: any) => sum + (entry.totalCost || 0), 0)
-      return { total: total.toFixed(2), breakdown: data }
-    }
-  } catch {}
-  
-  return { total: '0.00', breakdown: {} }
+    const { exec } = await import('child_process')
+    const { promisify } = await import('util')
+    const execAsync = promisify(exec)
+    
+    const { stdout } = await execAsync('python3 /home/legion/.openclaw/workspace/ai-cost-tracker/cli.py stats', { timeout: 10000 })
+    
+    // Parse "Total Cost: $X.XX" from output
+    const match = stdout.match(/Total Cost:\s+\$?([\d.]+)/)
+    const total = match ? parseFloat(match[1]).toFixed(2) : '0.00'
+    
+    return { total, breakdown: {} }
+  } catch (e) {
+    console.error('apiCosts error:', e)
+    return { total: '0.00', breakdown: {} }
+  }
 }
 
 export async function recentActivity() {

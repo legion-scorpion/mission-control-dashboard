@@ -1,165 +1,254 @@
-import { systemState, agents, cronHealth, projects, apiCosts, recentActivity } from '@/lib/api'
+'use client'
 
-function formatTimeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
+import { useEffect, useState } from 'react'
+
+interface CronJob {
+  id: string
+  name: string
+  next: string
+  last: string
+  status: string
 }
 
-export default async function HomePage() {
-  const [sysData, agentData, cronData, projectData, costs, activity] = await Promise.all([
-    systemState(),
-    agents(),
-    cronHealth(),
-    projects(),
-    apiCosts(),
-    recentActivity()
-  ])
+interface Session {
+  id: string
+  name: string
+  type: string
+  status: string
+  message: string
+  time: string
+}
 
-  const healthyJobs = cronData?.jobs?.filter((j: any) => j.status === 'ok')?.length ?? 0
-  const upServers = sysData?.servers?.filter((s: any) => s.status === 'up')?.length ?? 0
+interface SystemServer {
+  name: string
+  status: string
+  port: number
+}
+
+export default function CommandCenter() {
+  const [crons, setCrons] = useState<CronJob[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [servers, setServers] = useState<SystemServer[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/cron-health').then(r => r.json()),
+      fetch('/api/sessions').then(r => r.json()),
+      fetch('/api/system-state').then(r => r.json()),
+    ]).then(([cronData, sessionData, systemData]) => {
+      setCrons(cronData.jobs || [])
+      setSessions(sessionData.sessions || [])
+      setServers(systemData.servers || [])
+      setLoading(false)
+    })
+  }, [])
+
+  const failedCrons = crons.filter(c => c.status === 'error')
+  const activeSessions = sessions.filter(s => s.status === 'Active' || s.status.includes('m ago') === false)
+  const totalSessions = sessions.length
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#71717a' }}>Loading...</div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '16px', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '24px', paddingTop: '88px' }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'white' }}>Mission Control</h1>
-        <p style={{ color: '#71717a', marginTop: '4px' }}>System overview • {new Date().toLocaleDateString()}</p>
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 700, color: 'white', margin: 0 }}>Command Center</h1>
+        <p style={{ color: '#71717a', marginTop: '4px', fontSize: '15px' }}>What's happening, what needs attention</p>
       </div>
 
-      {/* Top Stats */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(2, 1fr)', 
-        gap: '12px',
-        marginBottom: '24px'
-      }}>
-        <StatCard value={upServers} label="Servers Up" icon="🖥️" color="#22c55e" />
-        <StatCard value={`$${costs.total}`} label="API Costs" icon="💰" color="#f59e0b" />
-        <StatCard value={agentData?.sessionCount ?? 0} label="Sessions" icon="💬" color="#8b5cf6" />
-        <StatCard value={`${healthyJobs}/${cronData?.jobs?.length ?? 0}`} label="Tests" icon="✅" color={healthyJobs === (cronData?.jobs?.length ?? 0) ? '#22c55e' : '#ef4444'} />
+      {/* Alert Banner - Only shows if something is wrong */}
+      {failedCrons.length > 0 && (
+        <div style={{ 
+          background: 'rgba(239, 68, 68, 0.1)', 
+          border: '1px solid rgba(239, 68, 68, 0.3)', 
+          borderRadius: '12px', 
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <span style={{ fontSize: '24px' }}>🚨</span>
+          <div>
+            <div style={{ color: '#fca5a5', fontWeight: 600, fontSize: '15px' }}>{failedCrons.length} Cron Job{failedCrons.length > 1 ? 's' : ''} Failed</div>
+            <div style={{ color: '#fca5a5', fontSize: '13px', opacity: 0.8 }}>{failedCrons.map(c => c.name).join(', ')}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        <StatCard label="Active Sessions" value={totalSessions} icon="💬" color="#3b82f6" />
+        <StatCard label="Cron Jobs" value={crons.length} icon="⏰" color="#8b5cf6" />
+        <StatCard label="Failed Jobs" value={failedCrons.length} icon="❌" color={failedCrons.length > 0 ? '#ef4444' : '#22c55e'} />
+        <StatCard label="Servers Online" value={servers.filter(s => s.status === 'up').length} total={servers.length} icon="🖥️" color="#22c55e" />
       </div>
 
-      {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+      {/* Two Column Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         
-        {/* Server Health - Real Checks */}
-        <Card title="Server Health" icon="❤️">
-          {sysData?.servers?.map((server: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < (sysData?.servers?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: server.status === 'up' ? '#22c55e' : '#ef4444', boxShadow: server.status === 'up' ? '0 0 8px #22c55e' : 'none' }} />
-                <span style={{ color: 'white', fontSize: '14px', fontWeight: 500 }}>{server.name}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#71717a', fontSize: '13px', fontFamily: 'monospace' }}>:{server.port}</span>
-                <span style={{ color: server.status === 'up' ? '#22c55e' : '#ef4444', fontSize: '12px', padding: '2px 8px', borderRadius: '4px', background: server.status === 'up' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)' }}>
-                  {server.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </Card>
-
-        {/* Project Status */}
-        <Card title="Projects" icon="📁">
-          {projectData?.projects?.map((project: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < (projectData?.projects?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: project.dirty ? '#f59e0b' : '#22c55e' }} />
-                <span style={{ color: 'white', fontSize: '14px', fontWeight: 500, textTransform: 'capitalize' }}>{project.name}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#8b5cf6', fontSize: '12px', fontFamily: 'monospace', padding: '2px 8px', borderRadius: '4px', background: 'rgba(139,92,246,0.15)' }}>
-                  {project.branch}
-                </span>
-                {project.dirty && (
-                  <span style={{ color: '#f59e0b', fontSize: '11px' }}>●</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </Card>
-
-        {/* Cron Jobs */}
-        <Card title="Scheduled Jobs" icon="⏰">
-          {cronData?.jobs?.map((job: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < (cronData?.jobs?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ color: job.status === 'ok' ? '#22c55e' : job.status === 'running' ? '#3b82f6' : '#ef4444', fontSize: '14px' }}>
-                  {job.status === 'ok' ? '✓' : job.status === 'running' ? '⟳' : '✗'}
-                </span>
-                <span style={{ color: 'white', fontSize: '14px' }}>{job.name}</span>
-              </div>
-              <span style={{ color: '#71717a', fontSize: '12px', fontFamily: 'monospace' }}>
-                {job.schedule}
-              </span>
-            </div>
-          ))}
-        </Card>
-
-        {/* Recent Activity */}
-        <Card title="Recent Activity" icon="🕐">
-          {activity?.sessions?.length > 0 ? (
-            activity.sessions.map((session: any, i: number) => (
-              <div key={i} style={{ padding: '10px 0', borderBottom: i < (activity?.sessions?.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ color: '#8b5cf6', fontSize: '12px', fontFamily: 'monospace' }}>{session.id.substring(0, 20)}...</span>
-                  <span style={{ color: '#52525b', fontSize: '11px' }}>{formatTimeAgo(session.lastActive)}</span>
+        {/* Left Column - Needs Attention */}
+        <div>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: failedCrons.length > 0 ? '#ef4444' : '#71717a' }}>●</span>
+            Needs Attention
+          </h2>
+          
+          {/* Failed Cron Jobs */}
+          {failedCrons.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {failedCrons.map((cron) => (
+                <div key={cron.id} style={{ 
+                  background: '#1a1a2e', 
+                  borderRadius: '12px', 
+                  padding: '16px',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ color: '#fca5a5', fontWeight: 600, fontSize: '14px' }}>{cron.name}</div>
+                      <div style={{ color: '#71717a', fontSize: '12px', marginTop: '4px' }}>Last ran: {cron.last}</div>
+                    </div>
+                    <span style={{ background: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>ERROR</span>
+                  </div>
                 </div>
-                <p style={{ color: '#a1a1aa', fontSize: '13px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {session.lastMessage}
-                </p>
-              </div>
-            ))
+              ))}
+            </div>
           ) : (
-            <p style={{ color: '#52525b', fontSize: '13px' }}>No recent activity</p>
+            <div style={{ 
+              background: '#1a1a2e', 
+              borderRadius: '12px', 
+              padding: '24px',
+              textAlign: 'center',
+              border: '1px solid rgba(34, 197, 94, 0.2)',
+            }}>
+              <span style={{ fontSize: '32px' }}>✅</span>
+              <div style={{ color: '#22c55e', fontWeight: 600, marginTop: '8px' }}>All Cron Jobs Healthy</div>
+            </div>
           )}
-        </Card>
 
+          {/* Server Status */}
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginTop: '24px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>●</span>
+            System Status
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {servers.map((server) => (
+              <div key={server.name} style={{ 
+                background: '#1a1a2e', 
+                borderRadius: '8px', 
+                padding: '12px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <span style={{ color: '#e4e4e7', fontSize: '14px' }}>{server.name}</span>
+                <span style={{ 
+                  color: server.status === 'up' ? '#22c55e' : '#ef4444',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}>
+                  {server.status === 'up' ? 'ONLINE' : 'DOWN'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column - Active Now */}
+        <div>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#22c55e' }}>●</span>
+            Recent Sessions
+          </h2>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+            {sessions.slice(0, 10).map((session) => (
+              <div key={session.id} style={{ 
+                background: '#1a1a2e', 
+                borderRadius: '10px', 
+                padding: '14px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ color: 'white', fontWeight: 500, fontSize: '14px' }}>{session.name}</div>
+                  <div style={{ color: '#71717a', fontSize: '12px', marginTop: '2px' }}>
+                    {session.type} • {session.time}
+                  </div>
+                </div>
+                <span style={{ 
+                  color: session.status === 'Active' ? '#22c55e' : '#71717a',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                }}>
+                  {session.status}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginTop: '24px', marginBottom: '16px' }}>
+            Quick Actions
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <ActionButton label="Restart Gateway" icon="🔄" />
+            <ActionButton label="View Logs" icon="📋" />
+            <ActionButton label="Run Test" icon="🧪" />
+            <ActionButton label="Open CLI" icon="💻" />
+          </div>
+        </div>
       </div>
-
-      <style>{`
-        @media (min-width: 768px) {
-          div[style*="gridTemplateColumns: repeat(2"] {
-            grid-template-columns: repeat(4, 1fr) !important;
-          }
-          div[style*="gridTemplateColumns: 1fr"] {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-        }
-        @media (min-width: 1280px) {
-          div[style*="gridTemplateColumns: 1fr"] {
-            grid-template-columns: repeat(4, 1fr) !important;
-          }
-        }
-      `}</style>
     </div>
   )
 }
 
-function StatCard({ value, label, icon, color }: { value: string | number; label: string; icon: string; color: string }) {
+function StatCard({ label, value, total, icon, color }: { label: string, value: number, total?: number, icon: string, color: string }) {
   return (
-    <div style={{ background: '#18181b', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+    <div style={{ 
+      background: '#0f0f14', 
+      borderRadius: '14px', 
+      padding: '20px',
+      border: '1px solid rgba(255,255,255,0.05)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         <span style={{ fontSize: '20px' }}>{icon}</span>
-        <span style={{ fontSize: '11px', color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+        <span style={{ color: '#71717a', fontSize: '13px' }}>{label}</span>
       </div>
-      <p style={{ fontSize: '26px', fontWeight: '700', color: color || 'white', margin: 0 }}>{value}</p>
+      <div style={{ fontSize: '36px', fontWeight: 700, color }}>
+        {total ? `${value}/${total}` : value}
+      </div>
     </div>
   )
 }
 
-function Card({ title, icon, children }: { title: string; icon?: string; children: React.ReactNode }) {
+function ActionButton({ label, icon }: { label: string, icon: string }) {
   return (
-    <div style={{ background: '#18181b', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-        {icon && <span style={{ fontSize: '14px' }}>{icon}</span>}
-        <h3 style={{ fontSize: '13px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>{title}</h3>
-      </div>
-      {children}
-    </div>
+    <button style={{ 
+      background: '#1a1a2e', 
+      border: '1px solid rgba(255,255,255,0.08)', 
+      borderRadius: '10px', 
+      padding: '14px',
+      color: '#a1a1aa',
+      fontSize: '13px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'all 0.15s ease',
+    }}>
+      <span>{icon}</span>
+      {label}
+    </button>
   )
 }

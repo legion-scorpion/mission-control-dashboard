@@ -1,6 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+interface CronJob {
+  id: string
+  name: string
+  next: string
+  last: string
+  status: string
+}
 
 interface Agent {
   id: string
@@ -9,19 +17,12 @@ interface Agent {
   model: string
   status: string
   level: string
-}
-
-interface CronJob {
-  name: string
-  schedule: string
-  status: string
-  nextRun?: string
+  sessions: number
 }
 
 export default function AgentsPage() {
-  const [activeTab, setActiveTab] = useState('agents')
   const [agents, setAgents] = useState<Agent[]>([])
-  const [cronJobs, setCronJobs] = useState<CronJob[]>([])
+  const [crons, setCrons] = useState<CronJob[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,102 +30,128 @@ export default function AgentsPage() {
       .then(res => res.json())
       .then(data => {
         setAgents(data.agents || [])
-        setCronJobs(data.crons || [])
+        setCrons(data.crons || [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [])
 
+  const failedCrons = crons.filter(c => c.status === 'error')
+  const okCrons = crons.filter(c => c.status === 'ok')
+
+  const getStatusColor = (status: string) => {
+    if (status === 'error') return '#ef4444'
+    if (status === 'ok') return '#22c55e'
+    return '#71717a'
+  }
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#71717a' }}>Loading...</div>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '16px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '24px', paddingTop: '88px' }}>
+      {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>Agents & Jobs</h1>
-        <p style={{ color: '#a1a1aa', marginTop: '4px' }}>Agent registry, models, and scheduled jobs</p>
+        <h1 style={{ fontSize: '32px', fontWeight: 700, color: 'white', margin: 0 }}>Agents</h1>
+        <p style={{ color: '#71717a', marginTop: '4px', fontSize: '15px' }}>Agent instances and cron job schedules</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button
-          onClick={() => setActiveTab('agents')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: activeTab === 'agents' ? '#27273a' : 'transparent',
-            color: activeTab === 'agents' ? 'white' : '#a1a1aa',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          Agents ({agents.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('jobs')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: activeTab === 'jobs' ? '#27273a' : 'transparent',
-            color: activeTab === 'jobs' ? 'white' : '#a1a1aa',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          Cron Jobs ({cronJobs.length})
-        </button>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+        <div style={{ background: '#0f0f14', borderRadius: '14px', padding: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ color: '#71717a', fontSize: '13px' }}>Total Agents</div>
+          <div style={{ color: 'white', fontSize: '32px', fontWeight: 700 }}>{agents.length}</div>
+        </div>
+        <div style={{ background: '#0f0f14', borderRadius: '14px', padding: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ color: '#71717a', fontSize: '13px' }}>Cron Jobs</div>
+          <div style={{ color: 'white', fontSize: '32px', fontWeight: 700 }}>{crons.length}</div>
+        </div>
+        <div style={{ background: '#0f0f14', borderRadius: '14px', padding: '20px', border: '1px solid rgba(255,255,255,0x05)' }}>
+          <div style={{ color: '#71717a', fontSize: '13px' }}>Failed</div>
+          <div style={{ color: failedCrons.length > 0 ? '#ef4444' : '#22c55e', fontSize: '32px', fontWeight: 700 }}>{failedCrons.length}</div>
+        </div>
       </div>
 
-      {loading ? (
-        <p style={{ color: '#71717a' }}>Loading...</p>
-      ) : activeTab === 'agents' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-          {agents.length === 0 ? (
-            <p style={{ color: '#52525b' }}>No agents found</p>
-          ) : (
-            agents.map((agent) => (
-              <div key={agent.id} style={{ background: '#1a1a2e', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '24px' }}>🤖</span>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>{agent.name}</h3>
-                      <span style={{ color: '#22c55e', fontSize: '12px' }}>● {agent.status}</span>
-                    </div>
-                    <p style={{ color: '#a1a1aa', fontSize: '14px' }}>{agent.role}</p>
-                    <p style={{ color: '#71717a', fontSize: '12px', marginTop: '4px' }}>{agent.model} | {agent.level}</p>
-                  </div>
-                </div>
+      {/* Agent Cards */}
+      <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', marginBottom: '16px' }}>Active Agents</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        {agents.map(agent => (
+          <div key={agent.id} style={{ 
+            background: '#0f0f14', 
+            borderRadius: '14px', 
+            padding: '20px',
+            border: '1px solid rgba(124, 58, 237, 0.2)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ color: 'white', fontSize: '18px', fontWeight: 700 }}>{agent.name}</div>
+                <div style={{ color: '#71717a', fontSize: '13px', marginTop: '4px' }}>{agent.role}</div>
               </div>
-            ))
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-          {cronJobs.length === 0 ? (
-            <p style={{ color: '#52525b' }}>No cron jobs found</p>
-          ) : (
-            cronJobs.map((job, i) => (
-              <div key={i} style={{ background: '#1a1a2e', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: job.status === 'ok' ? '#22c55e' : '#ef4444', fontSize: '14px' }}>
-                      {job.status === 'ok' ? '✓' : job.status === 'running' ? '⟳' : '✗'}
-                    </span>
-                    <h3 style={{ color: 'white', fontSize: '15px', fontWeight: 500 }}>{job.name}</h3>
-                  </div>
-                  <p style={{ color: '#71717a', fontSize: '12px', marginTop: '4px' }}>{job.schedule}</p>
-                </div>
-                {job.nextRun && (
-                  <span style={{ color: '#8b5cf6', fontSize: '11px', fontFamily: 'monospace' }}>
-                    {job.nextRun}
-                  </span>
-                )}
+              <span style={{ 
+                background: '#22c55e20', 
+                color: '#22c55e', 
+                padding: '4px 10px', 
+                borderRadius: '6px', 
+                fontSize: '11px',
+                fontWeight: 600,
+              }}>
+                ACTIVE
+              </span>
+            </div>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '16px' }}>
+              <div>
+                <div style={{ color: '#52525b', fontSize: '11px' }}>MODEL</div>
+                <div style={{ color: '#a1a1aa', fontSize: '13px' }}>{agent.model}</div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+              <div>
+                <div style={{ color: '#52525b', fontSize: '11px' }}>LEVEL</div>
+                <div style={{ color: '#a1a1aa', fontSize: '13px' }}>{agent.level}</div>
+              </div>
+              <div>
+                <div style={{ color: '#52525b', fontSize: '11px' }}>SESSIONS</div>
+                <div style={{ color: '#a1a1aa', fontSize: '13px' }}>{agent.sessions}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Cron Jobs */}
+      <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'white', marginBottom: '16px' }}>Cron Jobs</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {crons.map(cron => (
+          <div 
+            key={cron.id}
+            style={{ 
+              background: '#0f0f14', 
+              borderRadius: '10px', 
+              padding: '14px 18px',
+              border: cron.status === 'error' ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <div style={{ color: 'white', fontWeight: 500, fontSize: '14px' }}>{cron.name}</div>
+              <div style={{ color: '#52525b', fontSize: '12px', marginTop: '2px' }}>Next: {cron.next} • Last: {cron.last}</div>
+            </div>
+            <span style={{ 
+              color: getStatusColor(cron.status),
+              fontSize: '12px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+            }}>
+              {cron.status}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
