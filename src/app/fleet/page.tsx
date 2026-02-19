@@ -107,45 +107,35 @@ export default function FleetPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#030305', padding: '24px', paddingTop: '88px' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 700, color: 'white', margin: 0 }}>🛸 Fleet Command</h1>
-        <p style={{ color: '#71717a', marginTop: '4px', fontSize: '15px' }}>Your agent army, always working</p>
-      </div>
-
-      {/* Office Header - Like a dev team board */}
+      
+      {/* Unified Header with Stats */}
       <div style={{ 
         background: 'linear-gradient(135deg, #1a1a2e 0%, #0f0f14 100%)', 
         borderRadius: '20px', 
         padding: '24px 32px',
-        marginBottom: '32px',
+        marginBottom: '24px',
         border: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
       }}>
-        <div>
-          <h2 style={{ color: 'white', fontSize: '24px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            🏢 Dev Team Office
-          </h2>
-          <p style={{ color: '#71717a', marginTop: '4px' }}>
-            {agents.length} agents • {agents.filter(a => a.status === 'active').length} working • {crons.length} automated tasks
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 700, color: 'white', margin: 0 }}>🏢 Dev Team Office</h1>
+            <p style={{ color: '#71717a', marginTop: '4px', fontSize: '14px' }}>Your AI development team</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <span style={{ background: '#22c55e20', color: '#22c55e', padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+              🟢 {agents.filter(a => a.status === 'active').length} Active
+            </span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <span style={{ background: '#22c55e20', color: '#22c55e', padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-            🟢 Online
-          </span>
-        </div>
-      </div>
 
-      {/* Fleet Stats */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
-        <FleetStat label="Team Size" value={agents.length} icon="👥" />
-        <FleetStat label="At Desks" value={agents.filter(a => a.status === 'active').length} icon="💻" />
-        <FleetStat label="Running Tasks" value={crons.length} icon="⚙️" />
-        <FleetStat label="Conversations" value={sessions.length} icon="💬" />
-        <FleetStat label="Issues" value={failedCrons.length} icon="🚨" color={failedCrons.length > 0 ? '#ef4444' : '#22c55e'} />
+        {/* Compact Stats Row */}
+        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+          <StatItem label="Team" value={agents.length} />
+          <StatItem label="Working" value={agents.filter(a => a.status === 'active').length} />
+          <StatItem label="Tasks" value={crons.length} />
+          <StatItem label="Sessions" value={sessions.length} />
+          <StatItem label="Issues" value={failedCrons.length} color={failedCrons.length > 0 ? '#ef4444' : '#22c55e'} />
+        </div>
       </div>
 
       {/* Leadership - Main Agent */}
@@ -491,6 +481,15 @@ function FleetStat({ label, value, icon, color = '#71717a' }: { label: string, v
         <span style={{ color: '#71717a', fontSize: '12px' }}>{label}</span>
       </div>
       <div style={{ fontSize: '28px', fontWeight: 700, color }}>{value}</div>
+    </div>
+  )
+}
+
+function StatItem({ label, value, color = '#a1a1aa' }: { label: string, value: number, color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ color, fontSize: '18px', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: '#71717a', fontSize: '13px' }}>{label}</span>
     </div>
   )
 }
