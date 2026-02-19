@@ -138,31 +138,31 @@ export default function FleetPage() {
         </div>
       </div>
 
-      {/* Leadership - Main Agent */}
-      {agents.filter(a => a.isMain).map((agent) => (
-        <div key={agent.id} style={{ marginBottom: '32px' }}>
-          <h3 style={{ color: '#fbbf24', fontSize: '14px', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            👑 Leadership
-          </h3>
-          <div style={{ 
+      {/* Leadership + Team Side by Side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', marginBottom: '32px' }}>
+        
+        {/* Leadership - Main Agent */}
+        {agents.filter(a => a.isMain).map((agent) => (
+          <div key={agent.id} style={{ 
             background: `linear-gradient(135deg, ${agent.color}20 0%, #0f0f14 100%)`, 
             borderRadius: '20px', 
-            padding: '32px',
+            padding: '24px',
             border: `2px solid ${agent.color}40`,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               {/* Avatar */}
               <div style={{ 
-                width: '120px', 
-                height: '120px', 
-                borderRadius: '24px', 
+                width: '80px', 
+                height: '80px', 
+                borderRadius: '16px', 
                 background: `${agent.color}20`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '64px',
-                boxShadow: `0 0 60px ${agent.color}40`,
+                fontSize: '40px',
+                boxShadow: `0 0 40px ${agent.color}40`,
                 overflow: 'hidden',
+                flexShrink: 0,
               }}>
                 {agent.avatar ? (
                   <img src={agent.avatar} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -172,120 +172,95 @@ export default function FleetPage() {
               </div>
               
               {/* Info */}
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <h2 style={{ color: 'white', fontSize: '32px', fontWeight: 700, margin: 0 }}>{agent.personalName}</h2>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h2 style={{ color: 'white', fontSize: '24px', fontWeight: 700, margin: 0 }}>{agent.personalName}</h2>
                   <span style={{ 
                     background: agent.status === 'active' ? '#22c55e20' : '#3f3f4620', 
                     color: agent.status === 'active' ? '#22c55e' : '#71717a', 
-                    padding: '6px 14px', 
-                    borderRadius: '20px', 
-                    fontSize: '12px',
+                    padding: '4px 10px', 
+                    borderRadius: '12px', 
+                    fontSize: '10px',
                     fontWeight: 600,
                   }}>
                     {agent.status === 'active' ? '● AT DESK' : '○ OFFLINE'}
                   </span>
                 </div>
-                <p style={{ color: agent.color, fontSize: '16px', marginTop: '4px' }}>{agent.title}</p>
-                <p style={{ color: '#a1a1aa', fontSize: '14px', marginTop: '8px', fontStyle: 'italic' }}>"{agent.tagline}"</p>
-                
-                <div style={{ display: 'flex', gap: '32px', marginTop: '20px' }}>
-                  <div>
-                    <span style={{ color: '#52525b', fontSize: '12px' }}>PERSONALITY</span>
-                    <div style={{ color: 'white', fontSize: '14px' }}>{agent.personality}</div>
-                  </div>
-                  <div>
-                    <span style={{ color: '#52525b', fontSize: '12px' }}>ACTIVE SESSIONS</span>
-                    <div style={{ color: 'white', fontSize: '24px', fontWeight: 700 }}>{agent.sessions || 0}</div>
-                  </div>
-                </div>
+                <p style={{ color: agent.color, fontSize: '13px', marginTop: '2px' }}>{agent.title}</p>
+                <p style={{ color: '#71717a', fontSize: '12px', marginTop: '4px', fontStyle: 'italic' }}>"{agent.tagline}"</p>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {/* Project Agents - The Team */}
-      <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ color: '#60a5fa', fontSize: '14px', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          👨‍💻 Development Team
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-          {agents.filter(a => !a.isMain).map((agent) => {
-            const isActive = agent.status === 'active'
-            
-            return (
-              <div 
-                key={agent.id}
-                style={{ 
-                  background: `linear-gradient(135deg, ${agent.color}10 0%, #0f0f14 100%)`, 
-                  borderRadius: '16px', 
-                  padding: '20px',
-                  border: `1px solid ${agent.color}30`,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ 
-                    width: '64px', 
-                    height: '64px', 
-                    borderRadius: '16px', 
-                    background: `${agent.color}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '32px',
-                    overflow: 'hidden',
-                    boxShadow: `0 0 20px ${agent.color}30`,
-                  }}>
-                    {agent.avatar ? (
-                      <img src={agent.avatar} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      agent.emoji
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h4 style={{ color: 'white', fontSize: '18px', fontWeight: 700, margin: 0 }}>{agent.personalName}</h4>
-                      <span style={{ 
-                        background: isActive ? '#22c55e20' : '#3f3f4620', 
-                        color: isActive ? '#22c55e' : '#71717a', 
-                        padding: '2px 8px', 
-                        borderRadius: '8px', 
-                        fontSize: '10px',
-                        fontWeight: 600,
-                      }}>
-                        {isActive ? '●' : '○'} {isActive ? 'Working' : 'Idle'}
-                      </span>
+        {/* Project Agents - The Team */}
+        <div>
+          <h3 style={{ color: '#60a5fa', fontSize: '14px', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            👨‍💻 Development Team
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+            {agents.filter(a => !a.isMain).map((agent) => {
+              const isActive = agent.status === 'active'
+              
+              return (
+                <div 
+                  key={agent.id}
+                  style={{ 
+                    background: `linear-gradient(135deg, ${agent.color}10 0%, #0f0f14 100%)`, 
+                    borderRadius: '12px', 
+                    padding: '16px',
+                    border: `1px solid ${agent.color}30`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '12px', 
+                      background: `${agent.color}20`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                    }}>
+                      {agent.avatar ? (
+                        <img src={agent.avatar} alt={agent.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        agent.emoji
+                      )}
                     </div>
-                    <p style={{ color: agent.color, fontSize: '12px', marginTop: '2px' }}>{agent.title}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <h4 style={{ color: 'white', fontSize: '15px', fontWeight: 700, margin: 0 }}>{agent.personalName}</h4>
+                        <span style={{ 
+                          background: isActive ? '#22c55e20' : '#3f3f4620', 
+                          color: isActive ? '#22c55e' : '#71717a', 
+                          padding: '2px 6px', 
+                          borderRadius: '6px', 
+                          fontSize: '9px',
+                          fontWeight: 600,
+                        }}>
+                          {isActive ? '●' : '○'}
+                        </span>
+                      </div>
+                      <p style={{ color: agent.color, fontSize: '11px', marginTop: '2px' }}>{agent.title}</p>
+                    </div>
                   </div>
                 </div>
-                
-                <p style={{ color: '#71717a', fontSize: '13px', marginTop: '12px', fontStyle: 'italic' }}>"{agent.tagline}"</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #27272a' }}>
-                  <div>
-                    <span style={{ color: '#52525b', fontSize: '10px' }}>PROJECT</span>
-                    <div style={{ color: agent.color, fontSize: '13px' }}>{agent.name}</div>
-                  </div>
-                  <div>
-                    <span style={{ color: '#52525b', fontSize: '10px' }}>SESSIONS</span>
-                    <div style={{ color: '#a1a1aa', fontSize: '14px', fontWeight: 600 }}>{agent.sessions || 0}</div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* Worker Bots Grid */}
-      <h3 style={{ color: 'white', fontSize: '20px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <h3 style={{ color: 'white', fontSize: '18px', fontWeight: 600, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span>⚙️</span> Worker Bots ({crons.length})
       </h3>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
         {crons.map((cron) => {
           const persona = getPersona(cron.name)
           const isError = cron.status === 'error'
@@ -295,68 +270,46 @@ export default function FleetPage() {
               key={cron.id}
               style={{ 
                 background: '#0f0f14', 
-                borderRadius: '16px', 
-                padding: '20px',
+                borderRadius: '12px', 
+                padding: '14px',
                 border: isError ? '1px solid #ef444440' : '1px solid rgba(255,255,255,0.05)',
                 transition: 'all 0.2s ease',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
             >
               {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <div style={{ 
-                  width: '44px', 
-                  height: '44px', 
-                  borderRadius: '12px', 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '8px', 
                   background: `${persona.color}20`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '22px',
+                  fontSize: '16px',
                 }}>
                   {persona.emoji}
                 </div>
                 <span style={{ 
                   background: isError ? '#ef444420' : '#22c55e20', 
                   color: isError ? '#ef4444' : '#22c55e', 
-                  padding: '4px 10px', 
-                  borderRadius: '12px', 
-                  fontSize: '11px',
+                  padding: '2px 6px', 
+                  borderRadius: '6px', 
+                  fontSize: '9px',
                   fontWeight: 600,
                 }}>
-                  {isError ? '❌' : '✅'} {cron.status}
+                  {cron.status}
                 </span>
               </div>
 
               {/* Name & Role */}
-              <h4 style={{ color: 'white', fontSize: '16px', fontWeight: 600, margin: 0 }}>{cron.name}</h4>
-              <p style={{ color: '#71717a', fontSize: '12px', marginTop: '2px' }}>{persona.role}</p>
-              <p style={{ color: persona.color, fontSize: '12px', marginTop: '8px', fontStyle: 'italic' }}>"{persona.tagline}"</p>
+              <h4 style={{ color: 'white', fontSize: '12px', fontWeight: 600, margin: 0, lineHeight: 1.3 }}>{cron.name}</h4>
 
-              {/* Schedule */}
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginTop: '16px',
-                paddingTop: '12px',
-                borderTop: '1px solid #27272a',
-              }}>
-                <div>
-                  <span style={{ color: '#52525b', fontSize: '10px' }}>NEXT RUN</span>
-                  <div style={{ color: '#a1a1aa', fontSize: '13px' }}>{cron.next}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ color: '#52525b', fontSize: '10px' }}>LAST RUN</span>
-                  <div style={{ color: '#a1a1aa', fontSize: '13px' }}>{cron.last}</div>
-                </div>
+              {/* Schedule - compact */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #27272a', fontSize: '10px' }}>
+                <span style={{ color: '#52525b' }}>Next: {cron.next}</span>
+                <span style={{ color: '#52525b' }}>Last: {cron.last}</span>
               </div>
 
               {/* Activity Indicator */}
