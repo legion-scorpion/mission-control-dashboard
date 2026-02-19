@@ -1,19 +1,84 @@
 import { NextResponse } from 'next/server'
 import { execSync } from 'child_process'
 import fs from 'fs'
-import path from 'path'
 
-// Agent personas
-const agentPersonas: Record<string, { emoji: string, color: string, tagline: string, role: string }> = {
-  'Legion': { emoji: '🦂', color: '#7c3aed', tagline: 'Fix first, chat second', role: 'Main Agent' },
-  'ApexForm': { emoji: '💪', color: '#3b82f6', tagline: 'Fitness focused', role: 'Project Agent' },
-  'Hamono': { emoji: '⚔️', color: '#f59e0b', tagline: 'Forging blades', role: 'Project Agent' },
-  'ShootRebook': { emoji: '📷', color: '#22c55e', tagline: 'Booking photography', role: 'Project Agent' },
-  'StitchAI': { emoji: '🧵', color: '#8b5cf6', tagline: 'Stitching visions', role: 'Project Agent' },
+// Full agent profiles
+const agentProfiles: Record<string, any> = {
+  'Legion': {
+    id: 'main',
+    name: 'Legion',
+    personalName: 'The Boss',
+    title: 'Chief Operations Officer',
+    tagline: 'Fix first, chat second',
+    emoji: '🦂',
+    color: '#7c3aed',
+    personality: 'Direct, efficient, always busy',
+    avatar: '/avatars/legion-avatar.png',
+    isMain: true,
+  },
+  'ApexForm': {
+    id: 'apexform',
+    name: 'ApexForm',
+    personalName: 'Apex',
+    title: 'Lead Fitness Engineer',
+    tagline: 'Making gains, not excuses',
+    emoji: '💪',
+    color: '#3b82f6',
+    personality: 'Driven, data-focused, always optimizing workouts',
+    avatar: '/avatars/apexform-avatar.png',
+    isMain: false,
+  },
+  'Hamono': {
+    id: 'hamono',
+    name: 'Hamono',
+    personalName: 'Hiro',
+    title: 'Master Smith',
+    tagline: 'Every blade tells a story',
+    emoji: '⚔️',
+    color: '#f59e0b',
+    personality: 'Patient, artistic, takes pride in craft',
+    avatar: '/avatars/hamono-avatar.png',
+    isMain: false,
+  },
+  'ShootRebook': {
+    id: 'shootrebook',
+    name: 'ShootRebook',
+    personalName: 'Shutter',
+    title: 'Studio Manager',
+    tagline: 'Never miss a moment',
+    emoji: '📷',
+    color: '#22c55e',
+    personality: 'Organized, punctual, customer-focused',
+    avatar: '/avatars/shootrebook-avatar.png',
+    isMain: false,
+  },
+  'StitchAI': {
+    id: 'stitchai',
+    name: 'StitchAI',
+    personalName: 'Stitch',
+    title: 'Visionary Artist',
+    tagline: 'Sewing memories together',
+    emoji: '🧵',
+    color: '#8b5cf6',
+    personality: 'Creative, dreamy, sees patterns everywhere',
+    avatar: '/avatars/stitchai-avatar.png',
+    isMain: false,
+  },
 }
 
-function getPersona(agentName: string) {
-  return agentPersonas[agentName] || { emoji: '🤖', color: '#71717a', tagline: 'Getting things done', role: 'Agent' }
+function getProfile(agentName: string) {
+  return agentProfiles[agentName] || {
+    id: agentName.toLowerCase(),
+    name: agentName,
+    personalName: agentName,
+    title: 'Developer',
+    tagline: 'Getting things done',
+    emoji: '🤖',
+    color: '#71717a',
+    personality: 'Helpful',
+    avatar: null,
+    isMain: false,
+  }
 }
 
 export async function GET() {
@@ -25,7 +90,7 @@ export async function GET() {
     const agentConfig = JSON.parse(output)
     
     for (const agent of agentConfig) {
-      const persona = getPersona(agent.name)
+      const profile = getProfile(agent.name)
       
       // Get session count for this agent
       let sessionCount = 0
@@ -56,31 +121,13 @@ export async function GET() {
       } catch {}
       
       agents.push({
-        id: agent.id,
-        name: agent.name,
-        role: persona.role,
-        emoji: persona.emoji,
-        color: persona.color,
-        tagline: persona.tagline,
-        model: 'minimax/minimax-m2.5',
+        ...profile,
         status,
         sessions: sessionCount,
       })
     }
   } catch (e) {
     console.error('Failed to get agents:', e)
-    // Fallback to main agent
-    agents.push({
-      id: 'main',
-      name: 'Legion',
-      role: 'Main Agent',
-      emoji: '🦂',
-      color: '#7c3aed',
-      tagline: 'Fix first, chat second',
-      model: 'minimax/minimax-m2.5',
-      status: 'active',
-      sessions: 0,
-    })
   }
   
   // Get cron jobs
